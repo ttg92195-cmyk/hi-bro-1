@@ -44,6 +44,8 @@ jobs:
           mkdir -p ~/.local/share/godot/export_templates/4.6.stable
           unzip -q export_templates.tpz
           cp -r templates/* ~/.local/share/godot/export_templates/4.6.stable/
+          # Remove the extracted templates directory to avoid confusion with exported APKs
+          rm -rf templates/
 
       - name: Configure Godot editor settings
         run: |
@@ -71,42 +73,33 @@ jobs:
       - name: Build Android APK
         run: |
           mkdir -p export/android
-          ./godot --headless --export-debug "Android" 2>&1 | tee build.log || true
-
-      - name: Post-build - verify APK app name
-        if: always()
-        run: |
-          APK=$(find . -name "*.apk" -type f 2>/dev/null | head -1)
-          if [ -n "$APK" ]; then
-            echo "=== APK found: $APK ==="
-            echo "=== Checking app_name inside APK ==="
-            unzip -p "$APK" res/values/strings.xml 2>/dev/null || echo "No strings.xml in APK"
-            echo ""
-            echo "=== Checking AndroidManifest ==="
-            unzip -p "$APK" AndroidManifest.xml 2>/dev/null | strings | grep -i "name" || echo "Binary manifest, checking aapt"
-            aapt dump badging "$APK" 2>/dev/null | head -5 || echo "aapt not available"
+          ./godot --headless --export-debug "Android" 2>&1 | tee build.log
+          # Check if export actually succeeded by looking for the APK in the export path
+          if [ ! -f "export/android/NullvexGame.apk" ]; then
+            echo "ERROR: Export failed - APK not found at export/android/NullvexGame.apk"
+            echo "=== Checking for any APK files ==="
+            find . -name "*.apk" -not -path "./.git/*" -type f 2>/dev/null || echo "No APK files found"
+            exit 1
           fi
+          echo "SUCCESS: APK exported successfully"
+          ls -lh export/android/NullvexGame.apk
 
-      - name: Search for APK
+      - name: Verify APK contents
         if: always()
-        id: search
         run: |
-          echo "=== Build log (last 40 lines) ==="
-          tail -40 build.log 2>/dev/null || echo "No build log"
-          echo ""
-          echo "=== Searching APK files ==="
-          find . -name "*.apk" -type f 2>/dev/null
-          APK=$(find . -name "*.apk" -type f 2>/dev/null | head -1)
-          if [ -n "$APK" ]; then
-            mkdir -p export/android
-            cp "$APK" export/android/NullvexGame.apk
-            echo "apk_found=true" >> "$GITHUB_OUTPUT"
+          if [ -f "export/android/NullvexGame.apk" ]; then
+            echo "=== APK file size ==="
+            ls -lh export/android/NullvexGame.apk
+            echo "=== Checking app_name inside APK ==="
+            unzip -p export/android/NullvexGame.apk res/values/strings.xml 2>/dev/null || echo "No strings.xml in APK"
+            echo ""
+            echo "=== Checking package name via aapt ==="
+            aapt dump badging export/android/NullvexGame.apk 2>/dev/null | head -5 || echo "aapt not available"
           else
-            echo "apk_found=false" >> "$GITHUB_OUTPUT"
+            echo "APK not found for verification"
           fi
 
       - name: Upload APK
-        if: steps.search.outputs.apk_found == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: NullvexGame-Android-APK
@@ -114,7 +107,6 @@ jobs:
           retention-days: 30
 
       - name: Create Release
-        if: steps.search.outputs.apk_found == 'true'
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
