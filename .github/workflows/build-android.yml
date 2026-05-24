@@ -59,16 +59,24 @@ jobs:
           echo "export/android/debug_keystore_user = \"androiddebugkey\"" >> ~/.config/Godot/editor_settings-4.tres
           echo "=== Editor Settings ==="
           cat ~/.config/Godot/editor_settings-4.tres
-          echo ""
-          echo "=== Verify Java SDK ==="
-          ls "${JAVA_HOME}/bin/java" && echo "Java found!"
-          echo ""
-          echo "=== Verify Android SDK ==="
-          ls "${ANDROID_HOME}/platform-tools/adb" && echo "adb found!"
-          ls "${ANDROID_HOME}/build-tools/" && echo "build-tools found!"
 
-      - name: Import project
-        run: ./godot --headless --import project.godot 2>&1 || true
+      - name: Pre-heat Godot cache
+        run: ./godot --headless --editor --quit 2>&1 || true
+
+      - name: Install Android build template
+        run: ./godot --headless --install-android-build-template 2>&1 || true
+
+      - name: Verify Android build template installed
+        run: |
+          echo "=== Checking android/build/ contents ==="
+          ls -la android/build/ 2>/dev/null || echo "android/build/ not found!"
+          echo ""
+          if [ -f "android/build/.build_version" ]; then
+            echo "Build template version:"
+            cat android/build/.build_version
+          else
+            echo "WARNING: .build_version not found"
+          fi
 
       - name: Build Android APK
         run: |
