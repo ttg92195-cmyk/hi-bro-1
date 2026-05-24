@@ -2,7 +2,8 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -24,149 +25,81 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android build tools & NDK
-        run: |
-          yes | sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;23.2.8568313"
+      - name: Install Android build tools and NDK
+        run: yes | sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;23.2.8568313"
 
       - name: Create debug keystore
-        run: |
-          keytool -keyalg RSA -genkeypair -alias androiddebugkey \
-            -keypass android -keystore debug.keystore -storepass android \
-            -dname "CN=Android Debug,O=Android,C=US" -validity 9999 \
-            -deststoretype pkcs12
+        run: keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
 
       - name: Download Godot 4.6 Editor
         run: |
-          echo "Downloading Godot 4.6 editor..."
           wget -q "https://github.com/godotengine/godot/releases/download/4.6-stable/Godot_v4.6-stable_linux.x86_64.zip" -O godot-editor.zip
           unzip -o godot-editor.zip
           chmod +x Godot_v4.6-stable_linux.x86_64
           ln -sf Godot_v4.6-stable_linux.x86_64 godot
-          echo "Godot version:"
-          ./godot --version || true
 
       - name: Download and install export templates
         run: |
-          echo "Downloading Godot 4.6 export templates..."
           wget -q "https://github.com/godotengine/godot/releases/download/4.6-stable/Godot_v4.6-stable_export_templates.tpz" -O export_templates.tpz
           mkdir -p ~/.local/share/godot/export_templates/4.6.stable
           unzip -q export_templates.tpz
           cp -r templates/* ~/.local/share/godot/export_templates/4.6.stable/
-          echo "Templates installed:"
-          ls ~/.local/share/godot/export_templates/4.6.stable/
 
       - name: Configure Godot editor settings
         run: |
           mkdir -p ~/.config/Godot/
-          # Write editor settings WITHOUT leading spaces (heredoc with <<-'EOF' strips tabs, but we use raw cat)
-          cat > ~/.config/Godot/editor_settings-4.tres << 'EDITOR_EOF'
-[gd_resource type="EditorSettings" format=3 uid="uid://editor_settings"]
-
-[resource]
-EDITOR_EOF
-          # Append Android SDK/keystore settings (needs variable expansion)
+          cat > ~/.config/Godot/editor_settings-4.tres << 'EOF'
+          [gd_resource type="EditorSettings" format=3]
+          
+          [resource]
+          EOF
           echo "export/android/android_sdk_path = \"${ANDROID_HOME}\"" >> ~/.config/Godot/editor_settings-4.tres
           echo "export/android/debug_keystore = \"${GITHUB_WORKSPACE}/debug.keystore\"" >> ~/.config/Godot/editor_settings-4.tres
           echo "export/android/debug_keystore_pass = \"android\"" >> ~/.config/Godot/editor_settings-4.tres
           echo "export/android/debug_keystore_user = \"androiddebugkey\"" >> ~/.config/Godot/editor_settings-4.tres
-          echo "--- Editor settings ---"
-          cat ~/.config/Godot/editor_settings-4.tres
 
       - name: Update export presets with keystore
         run: |
-          sed -i 's|keystore/debug=""|keystore/debug="res://debug.keystore"|' export_presets.cfg
-          sed -i 's|keystore/debug_user=""|keystore/debug_user="androiddebugkey"|' export_presets.cfg
-          sed -i 's|keystore/debug_password=""|keystore/debug_password="android"|' export_presets.cfg
-          echo "--- Updated export_presets.cfg (Android section) ---"
-          sed -n '/\[preset.1\]/,/\[preset\|^$/p' export_presets.cfg | head -40
+          sed -i 's|keystore/debug=""|keystore/debug="res://debug.keystore"|g' export_presets.cfg
+          sed -i 's|keystore/debug_user=""|keystore/debug_user="androiddebugkey"|g' export_presets.cfg
+          sed -i 's|keystore/debug_password=""|keystore/debug_password="android"|g' export_presets.cfg
 
-      - name: Import project (required for headless export)
-        run: |
-          echo "Running Godot import step..."
-          ./godot --headless --import project.godot 2>&1 | tee import.log || true
-          echo "Import step finished"
+      - name: Import project
+        run: ./godot --headless --import project.godot 2>&1 || true
 
       - name: Build Android APK
         run: |
           mkdir -p export/android
-          echo "=== Starting Godot Android export ==="
-          ./godot --headless --export-debug "Android" 2>&1 | tee build.log
-          EXIT_CODE=$?
-          echo "Godot export exit code: $EXIT_CODE"
+          ./godot --headless --export-debug "Android" 2>&1 | tee build.log || true
 
-      - name: Debug - check all outputs
+      - name: Search for APK
         if: always()
+        id: search
         run: |
-          echo "=== Build log (last 80 lines) ==="
-          tail -80 build.log 2>/dev/null || echo "No build log"
+          echo "=== Build log ==="
+          cat build.log 2>/dev/null || echo "No build log"
           echo ""
-          echo "=== Import log (last 20 lines) ==="
-          tail -20 import.log 2>/dev/null || echo "No import log"
-          echo ""
-          echo "=== Searching for APK files ==="
-          find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
-          echo ""
-          echo "=== Export directory ==="
-          ls -laR export/ 2>/dev/null || echo "No export directory"
-          echo ""
-          echo "=== Gradle build directory ==="
-          find . -path "*/gradle_build/*" -name "*.apk" 2>/dev/null || echo "No gradle APK"
-          echo ""
-          echo "=== Editor settings ==="
-          cat ~/.config/Godot/editor_settings-4.tres 2>/dev/null || echo "No editor settings"
-          echo ""
-          echo "=== Export templates ==="
-          ls ~/.local/share/godot/export_templates/4.6.stable/ 2>/dev/null || echo "No templates"
-
-      - name: Find APK
-        id: find_apk
-        if: always()
-        run: |
-          APK_PATH=""
-          # Check primary export path
-          if [ -f "export/android/NullvexGame.apk" ]; then
-            APK_PATH="export/android/NullvexGame.apk"
-            echo "APK found at export/android/NullvexGame.apk"
-          fi
-          # Check gradle build output
-          if [ -z "$APK_PATH" ]; then
-            GRADLE_APK=$(find . -path "*/gradle_build/*" -name "*.apk" -type f 2>/dev/null | head -1)
-            if [ -n "$GRADLE_APK" ]; then
-              echo "APK found at gradle output: $GRADLE_APK"
-              mkdir -p export/android
-              cp "$GRADLE_APK" export/android/NullvexGame.apk
-              APK_PATH="export/android/NullvexGame.apk"
-            fi
-          fi
-          # Check any other APK
-          if [ -z "$APK_PATH" ]; then
-            ANY_APK=$(find . -name "*.apk" -type f 2>/dev/null | head -1)
-            if [ -n "$ANY_APK" ]; then
-              echo "APK found at: $ANY_APK"
-              mkdir -p export/android
-              cp "$ANY_APK" export/android/NullvexGame.apk
-              APK_PATH="export/android/NullvexGame.apk"
-            fi
-          fi
-          if [ -n "$APK_PATH" ] && [ -f "$APK_PATH" ]; then
-            echo "apk_found=true" >> $GITHUB_OUTPUT
-            ls -la "$APK_PATH"
-            echo "APK size: $(du -h "$APK_PATH" | cut -f1)"
+          echo "=== Searching APK files ==="
+          find . -name "*.apk" -type f 2>/dev/null
+          APK=$(find . -name "*.apk" -type f 2>/dev/null | head -1)
+          if [ -n "$APK" ]; then
+            mkdir -p export/android
+            cp "$APK" export/android/NullvexGame.apk
+            echo "apk_found=true" >> "$GITHUB_OUTPUT"
           else
-            echo "apk_found=false" >> $GITHUB_OUTPUT
-            echo "ERROR: No APK was produced"
+            echo "apk_found=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Upload APK artifact
-        if: steps.find_apk.outputs.apk_found == 'true'
+      - name: Upload APK
+        if: steps.search.outputs.apk_found == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: NullvexGame-Android-APK
           path: export/android/NullvexGame.apk
           retention-days: 30
 
-      - name: Create Release with APK
-        if: steps.find_apk.outputs.apk_found == 'true'
+      - name: Create Release
+        if: steps.search.outputs.apk_found == 'true'
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -174,14 +107,10 @@ EDITOR_EOF
           tag_name: v1.${{ github.run_number }}
           name: NullvexGame Android v1.${{ github.run_number }}
           files: export/android/NullvexGame.apk
-          draft: false
-          prerelease: false
 
-      - name: Upload build log on failure
+      - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: android-build-log
-          path: |
-            build.log
-            import.log
+          name: build-logs
+          path: build.log
