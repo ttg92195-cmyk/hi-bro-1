@@ -1,0 +1,193 @@
+[gd_scene format=3 uid="uid://stage_01"]
+
+[ext_resource type="Script" path="res://stages/stage_scene.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://stage_controller" path="res://stages/stage_controller.tscn" id="2_sc"]
+[ext_resource type="PackedScene" uid="uid://checkpoint" path="res://stages/checkpoint.tscn" id="3_cp"]
+[ext_resource type="PackedScene" uid="uid://collectible" path="res://stages/collectible.tscn" id="4_col"]
+[ext_resource type="PackedScene" uid="uid://hud" path="res://ui/hud.tscn" id="5_hud"]
+[ext_resource type="PackedScene" uid="uid://pause_menu" path="res://ui/pause_menu.tscn" id="6_pause"]
+[ext_resource type="PackedScene" uid="uid://game_over" path="res://ui/game_over.tscn" id="7_gameover"]
+[ext_resource type="PackedScene" uid="uid://stage_complete" path="res://ui/stage_complete.tscn" id="8_scom"]
+[ext_resource type="PackedScene" uid="uid://ignarath" path="res://characters/bosses/ignarath.tscn" id="9_boss"]
+[ext_resource type="PackedScene" uid="uid://enemy_base" path="res://characters/enemies/enemy_base.tscn" id="10_grunt"]
+[ext_resource type="PackedScene" uid="uid://enemy_flyer" path="res://characters/enemies/enemy_flyer.tscn" id="11_flyer"]
+
+[sub_resource type="RectangleShape2D" id="FloorA"]
+size = Vector2(800, 40)
+
+[sub_resource type="RectangleShape2D" id="FloorB"]
+size = Vector2(600, 40)
+
+[sub_resource type="RectangleShape2D" id="FloorPre"]
+size = Vector2(500, 40)
+
+[sub_resource type="RectangleShape2D" id="FloorBoss"]
+size = Vector2(1200, 40)
+
+[sub_resource type="RectangleShape2D" id="P1"]
+size = Vector2(200, 20)
+
+[sub_resource type="RectangleShape2D" id="P2"]
+size = Vector2(180, 20)
+
+[sub_resource type="RectangleShape2D" id="P3"]
+size = Vector2(200, 20)
+
+[sub_resource type="RectangleShape2D" id="P4"]
+size = Vector2(220, 20)
+
+[sub_resource type="RectangleShape2D" id="P5"]
+size = Vector2(200, 20)
+
+[sub_resource type="RectangleShape2D" id="P6"]
+size = Vector2(200, 20)
+
+[sub_resource type="RectangleShape2D" id="P7"]
+size = Vector2(220, 20)
+
+[sub_resource type="RectangleShape2D" id="P8"]
+size = Vector2(200, 20)
+
+[sub_resource type="RectangleShape2D" id="P9"]
+size = Vector2(250, 20)
+
+[sub_resource type="RectangleShape2D" id="P10"]
+size = Vector2(200, 20)
+
+[node name="Stage01" type="Node2D"]
+platform_color = Color(0.9, 0.3, 0.1, 1)
+script = ExtResource("1_script")
+
+[node name="PlayerSpawn" type="Node2D" parent="."]
+position = Vector2(200, 760)
+
+[node name="StageController" parent="." instance=ExtResource("2_sc")]
+
+[node name="Checkpoint1" parent="." instance=ExtResource("3_cp")]
+position = Vector2(2000, 850)
+checkpoint_index = 1
+
+[node name="Checkpoint2" parent="." instance=ExtResource("3_cp")]
+position = Vector2(3500, 850)
+checkpoint_index = 2
+
+[node name="FloorA" type="StaticBody2D" parent="."]
+position = Vector2(400, 920)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="FloorA"]
+shape = SubResource("FloorA")
+
+[node name="FloorB" type="StaticBody2D" parent="."]
+position = Vector2(1900, 920)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="FloorB"]
+shape = SubResource("FloorB")
+
+[node name="FloorPre" type="StaticBody2D" parent="."]
+position = Vector2(3500, 920)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="FloorPre"]
+shape = SubResource("FloorPre")
+
+[node name="FloorBoss" type="StaticBody2D" parent="."]
+position = Vector2(4700, 920)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="FloorBoss"]
+shape = SubResource("FloorBoss")
+
+[node name="Plat1" type="StaticBody2D" parent="."]
+position = Vector2(850, 820)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Plat1"]
+shape = SubResource("P1")
+
+[node name="Plat2" type="StaticBody2D" parent="."]
+position = Vector2(1100, 760)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Plat2"]
+shape = SubResource("P2")
+
+[node name="Plat3" type="StaticBody2D" parent="."]
+position = Vector2(1350, 700)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Plat3"]
+shape = SubResource("P3")
+
+[node name="Plat4" type="StaticBody2D" parent="."]
+position = Vector2(1650, 640)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Plat4"]
+shape = SubResource("P4")
+
+[node name="Plat5" type="StaticBody2D" parent="."]
+position = Vector2(1950, 580)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Plat5"]
+shape = SubResource("P5")
+
+[node name="Plat6" type="StaticBody2D" parent="."]
+position = Vector2(2300, 640)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Plat6"]
+shape = SubResource("P6")
+
+[node name="Plat7" type="StaticBody2D" parent="."]
+position = Vector2(2600, 700)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Plat7"]
+shape = SubResource("P7")
+
+[node name="Plat8" type="StaticBody2D" parent="."]
+position = Vector2(2900, 760)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Plat8"]
+shape = SubResource("P8")
+
+[node name="Plat9" type="StaticBody2D" parent="."]
+position = Vector2(3200, 820)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Plat9"]
+shape = SubResource("P9")
+
+[node name="Plat10" type="StaticBody2D" parent="."]
+position = Vector2(3700, 740)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Plat10"]
+shape = SubResource("P10")
+
+[node name="Heart" parent="." instance=ExtResource("4_col")]
+position = Vector2(1350, 660)
+stage_id = 1
+
+[node name="ArmorZaelHelmet" parent="." instance=ExtResource("4_col")]
+position = Vector2(1950, 540)
+collectible_type = 2
+armor_piece = "helmet"
+
+[node name="DualBladesZara" parent="." instance=ExtResource("4_col")]
+position = Vector2(2900, 720)
+collectible_type = 5
+ability_id = "dual_blades"
+
+[node name="Ignarath" parent="." instance=ExtResource("9_boss")]
+position = Vector2(4600, 760)
+arena_left = 4100.0
+arena_right = 5100.0
+arena_floor = 900.0
+
+[node name="Grunt1" parent="." instance=ExtResource("10_grunt")]
+position = Vector2(850, 790)
+
+[node name="Grunt2" parent="." instance=ExtResource("10_grunt")]
+position = Vector2(1350, 670)
+
+[node name="Grunt3" parent="." instance=ExtResource("10_grunt")]
+position = Vector2(2600, 670)
+
+[node name="Grunt4" parent="." instance=ExtResource("10_grunt")]
+position = Vector2(2900, 730)
+
+[node name="Flyer1" parent="." instance=ExtResource("11_flyer")]
+position = Vector2(1700, 600)
+
+[node name="Flyer2" parent="." instance=ExtResource("11_flyer")]
+position = Vector2(2150, 580)
+
+[node name="HUD" parent="." instance=ExtResource("5_hud")]
+[node name="PauseMenu" parent="." instance=ExtResource("6_pause")]
+[node name="GameOver" parent="." instance=ExtResource("7_gameover")]
+[node name="StageComplete" parent="." instance=ExtResource("8_scom")]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+limit_left = 0
+limit_top = 0
+limit_bottom = 1080
+limit_right = 5300
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0
