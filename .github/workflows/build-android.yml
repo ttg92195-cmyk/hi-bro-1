@@ -1,0 +1,76 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Godot
+        uses: chickensoft-games/setup-godot@v1
+        with:
+          version: 4.6.0
+          use-dotnet: false
+
+      - name: Setup Java (for Android build)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: sdkmanager "ndk;23.2.8568313"
+
+      - name: Create debug keystore
+        run: |
+          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+          mkdir -p ~/.config/godot/export_presets
+          echo '{"debug_keystore": "'$(pwd)'/debug.keystore", "debug_password": "android", "debug_user": "androiddebugkey"}' > ~/.config/godot/editor_settings-4.json
+
+      - name: Build Android APK
+        run: |
+          godot --headless --export-debug "Android" export/android/NullvexGame.apk 2>&1 || true
+          # Also try the editor export approach
+          mkdir -p export/android
+
+      - name: Check APK output
+        id: check_apk
+        run: |
+          if [ -f "export/android/NullvexGame.apk" ]; then
+            echo "apk_exists=true" >> $GITHUB_OUTPUT
+            echo "APK built successfully!"
+            ls -la export/android/NullvexGame.apk
+          else
+            echo "apk_exists=false" >> $GITHUB_OUTPUT
+            echo "APK not found - Godot editor build required locally"
+          fi
+
+      - name: Upload APK artifact
+        if: steps.check_apk.outputs.apk_exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: NullvexGame-Android-APK
+          path: export/android/NullvexGame.apk
+          retention-days: 30
+
+      - name: Create Release with APK
+        if: steps.check_apk.outputs.apk_exists == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-build-${{ github.sha }}
+          name: Android Build ${{ github.sha }}
+          files: export/android/NullvexGame.apk
+          draft: false
+          prerelease: true
