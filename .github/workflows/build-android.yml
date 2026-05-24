@@ -46,7 +46,17 @@ jobs:
           mkdir -p ~/.local/share/godot/export_templates/4.6.stable
           unzip -q export_templates.tpz
           cp -r templates/* ~/.local/share/godot/export_templates/4.6.stable/
-          rm -rf templates/
+          # Extract android_source.zip for Gradle build template
+          echo "=== Installing Android build template from android_source.zip ==="
+          unzip -o ~/.local/share/godot/export_templates/4.6.stable/android_source.zip -d android/build_template/
+          # Copy the template files to android/build/ 
+          # The source zip contains the full gradle project structure
+          cp -r android/build_template/* android/build/ 2>/dev/null || true
+          # Make sure our custom strings.xml is preserved
+          echo "=== Verify android/build/ contents ==="
+          ls -la android/build/ 2>/dev/null || echo "android/build/ not found"
+          # Clean up
+          rm -rf templates/ android/build_template/
 
       - name: Configure Godot editor settings
         run: |
@@ -63,20 +73,19 @@ jobs:
       - name: Pre-heat Godot cache
         run: ./godot --headless --editor --quit 2>&1 || true
 
-      - name: Install Android build template
-        run: ./godot --headless --install-android-build-template 2>&1 || true
-
-      - name: Verify Android build template installed
+      - name: Verify build template and configuration
         run: |
-          echo "=== Checking android/build/ contents ==="
-          ls -la android/build/ 2>/dev/null || echo "android/build/ not found!"
+          echo "=== android/build/ contents ==="
+          find android/build/ -type f | head -20
           echo ""
-          if [ -f "android/build/.build_version" ]; then
-            echo "Build template version:"
-            cat android/build/.build_version
-          else
-            echo "WARNING: .build_version not found"
-          fi
+          echo "=== Checking .build_version ==="
+          cat android/build/.build_version 2>/dev/null || echo ".build_version not found"
+          echo ""
+          echo "=== Checking build.gradle ==="
+          ls -la android/build/build.gradle 2>/dev/null || echo "build.gradle not found"
+          echo ""
+          echo "=== Checking strings.xml ==="
+          cat android/build/res/values/strings.xml 2>/dev/null || echo "strings.xml not found"
 
       - name: Build Android APK
         run: |
