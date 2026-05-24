@@ -29,7 +29,9 @@ jobs:
         run: yes | sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;23.2.8568313"
 
       - name: Create debug keystore in project root
-        run: keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+        run: |
+          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+          ls -la debug.keystore
 
       - name: Download Godot 4.6 Editor
         run: |
@@ -44,7 +46,6 @@ jobs:
           mkdir -p ~/.local/share/godot/export_templates/4.6.stable
           unzip -q export_templates.tpz
           cp -r templates/* ~/.local/share/godot/export_templates/4.6.stable/
-          # Remove the extracted templates directory to avoid confusion with exported APKs
           rm -rf templates/
 
       - name: Configure Godot editor settings
@@ -55,34 +56,38 @@ jobs:
           echo "export/android/debug_keystore = \"${GITHUB_WORKSPACE}/debug.keystore\"" >> ~/.config/Godot/editor_settings-4.tres
           echo "export/android/debug_keystore_pass = \"android\"" >> ~/.config/Godot/editor_settings-4.tres
           echo "export/android/debug_keystore_user = \"androiddebugkey\"" >> ~/.config/Godot/editor_settings-4.tres
-
-      - name: Verify export presets
-        run: |
-          echo "=== package/name in export_presets.cfg ==="
-          grep "package/name" export_presets.cfg
-          echo "=== keystore/debug in export_presets.cfg ==="
-          grep "keystore/debug" export_presets.cfg
-          echo "=== project name in project.godot ==="
-          grep "config/name" project.godot
-          echo "=== strings.xml ==="
-          cat android/build/res/values/strings.xml
+          echo "=== Editor Settings ==="
+          cat ~/.config/Godot/editor_settings-4.tres
 
       - name: Import project
-        run: ./godot --headless --import project.godot 2>&1 || true
+        run: |
+          echo "=== export_presets.cfg BEFORE import ==="
+          cat export_presets.cfg
+          echo ""
+          echo "=== Running Godot import ==="
+          ./godot --headless --import project.godot 2>&1 || true
+          echo ""
+          echo "=== export_presets.cfg AFTER import ==="
+          cat export_presets.cfg
 
       - name: Build Android APK
         run: |
           mkdir -p export/android
+          echo "=== Starting Android export ==="
           ./godot --headless --export-debug "Android" 2>&1 | tee build.log
-          # Check if export actually succeeded by looking for the APK in the export path
-          if [ ! -f "export/android/NullvexGame.apk" ]; then
-            echo "ERROR: Export failed - APK not found at export/android/NullvexGame.apk"
-            echo "=== Checking for any APK files ==="
+          echo ""
+          echo "=== Checking for exported APK ==="
+          if [ -f "export/android/NullvexGame.apk" ]; then
+            echo "SUCCESS: APK exported!"
+            ls -lh export/android/NullvexGame.apk
+          else
+            echo "ERROR: APK not found at export/android/NullvexGame.apk"
+            echo "=== Searching for any APK files ==="
             find . -name "*.apk" -not -path "./.git/*" -type f 2>/dev/null || echo "No APK files found"
+            echo "=== Build log (last 50 lines) ==="
+            tail -50 build.log 2>/dev/null || true
             exit 1
           fi
-          echo "SUCCESS: APK exported successfully"
-          ls -lh export/android/NullvexGame.apk
 
       - name: Verify APK contents
         if: always()
