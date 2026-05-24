@@ -52,17 +52,8 @@ jobs:
           # Copy the template files to android/build/ 
           # The source zip contains the full gradle project structure
           cp -r android/build_template/* android/build/ 2>/dev/null || true
-          # Create .build_version file so Godot recognizes the Android build template
-          echo "4.6.stable" > android/build/.build_version
-          # Make sure our custom strings.xml is preserved (overwrite the template default)
-          echo '<?xml version="1.0" encoding="utf-8"?>' > android/build/res/values/strings.xml
-          echo '<resources>' >> android/build/res/values/strings.xml
-          echo '    <string name="app_name">NullvexGame</string>' >> android/build/res/values/strings.xml
-          echo '</resources>' >> android/build/res/values/strings.xml
           echo "=== Verify android/build/ contents ==="
           ls -la android/build/ 2>/dev/null || echo "android/build/ not found"
-          echo "=== .build_version ==="
-          cat android/build/.build_version
           # Clean up
           rm -rf templates/ android/build_template/
 
@@ -80,6 +71,20 @@ jobs:
 
       - name: Pre-heat Godot cache
         run: ./godot --headless --editor --quit 2>&1 || true
+
+      - name: Setup Android build template (after pre-heat)
+        run: |
+          # Create .build_version file AFTER pre-heat, so Godot recognizes the Android build template
+          echo "4.6.stable" > android/build/.build_version
+          # Overwrite strings.xml with our custom app name
+          echo '<?xml version="1.0" encoding="utf-8"?>' > android/build/res/values/strings.xml
+          echo '<resources>' >> android/build/res/values/strings.xml
+          echo '    <string name="app_name">NullvexGame</string>' >> android/build/res/values/strings.xml
+          echo '</resources>' >> android/build/res/values/strings.xml
+          echo "=== .build_version ==="
+          cat android/build/.build_version
+          echo "=== strings.xml ==="
+          cat android/build/res/values/strings.xml
 
       - name: Verify build template and configuration
         run: |
