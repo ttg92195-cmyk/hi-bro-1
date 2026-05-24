@@ -52,23 +52,23 @@ jobs:
         run: |
           mkdir -p ~/.config/Godot/
           printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\n' > ~/.config/Godot/editor_settings-4.tres
+          echo "export/android/java_sdk_path = \"${JAVA_HOME}\"" >> ~/.config/Godot/editor_settings-4.tres
           echo "export/android/android_sdk_path = \"${ANDROID_HOME}\"" >> ~/.config/Godot/editor_settings-4.tres
           echo "export/android/debug_keystore = \"${GITHUB_WORKSPACE}/debug.keystore\"" >> ~/.config/Godot/editor_settings-4.tres
           echo "export/android/debug_keystore_pass = \"android\"" >> ~/.config/Godot/editor_settings-4.tres
           echo "export/android/debug_keystore_user = \"androiddebugkey\"" >> ~/.config/Godot/editor_settings-4.tres
           echo "=== Editor Settings ==="
           cat ~/.config/Godot/editor_settings-4.tres
+          echo ""
+          echo "=== Verify Java SDK ==="
+          ls "${JAVA_HOME}/bin/java" && echo "Java found!"
+          echo ""
+          echo "=== Verify Android SDK ==="
+          ls "${ANDROID_HOME}/platform-tools/adb" && echo "adb found!"
+          ls "${ANDROID_HOME}/build-tools/" && echo "build-tools found!"
 
       - name: Import project
-        run: |
-          echo "=== export_presets.cfg BEFORE import ==="
-          cat export_presets.cfg
-          echo ""
-          echo "=== Running Godot import ==="
-          ./godot --headless --import project.godot 2>&1 || true
-          echo ""
-          echo "=== export_presets.cfg AFTER import ==="
-          cat export_presets.cfg
+        run: ./godot --headless --import project.godot 2>&1 || true
 
       - name: Build Android APK
         run: |
